@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Compras</title>
+    <style>
+        /* Estilos CSS aqui */
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.3.0/dist/tesseract.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Calculadora de Compras</h1>
+    </header>
+    <main>
+        <div id="camera">
+            <video id="video" width="400" height="300" autoplay></video>
+            <button id="take-photo">Tirar Foto</button>
+            <canvas id="canvas" style="display: none;"></canvas>
+        </div>
+        <div id="total">
+            <h2>Total da Compra:</h2>
+            <p id="total-value">R$ 0,00</p>
+            <button id="correct">Corrigir</button>
+        </div>
+    </main>
+    <script>
+        // Inicializa a soma total
+        let total = 0;
+
+        // Função para capturar a imagem da câmera
+        async function takePhoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+
+            // Captura a imagem da câmera
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            video.pause();
+
+            // Converte a imagem do canvas para base64
+            const imageUrl = canvas.toDataURL('image/jpeg');
+
+            // Reconhecimento de texto na imagem
+            const worker = Tesseract.createWorker();
+
+            await worker.load();
+            await worker.loadLanguage('por');
+            await worker.initialize('por');
+            const { data: { text } } = await worker.recognize(imageUrl);
+            await worker.terminate();
+
+            // Extrai os números do texto reconhecido
+            const numbers = text.match(/\d+/g);
+
+            // Soma os números
+            if (numbers) {
+                numbers.forEach(number => {
+                    total += parseFloat(number);
+                });
+            }
+
+            // Atualiza o total da compra na tela
+            const totalValueElement = document.getElementById('total-value');
+            totalValueElement.textContent = `R$ ${total.toFixed(2)}`;
+
+            // Limpa o canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Reinicia o vídeo da câmera
+            video.play();
+        }
+
+        // Evento de clique no botão de tirar foto
+        const takePhotoButton = document.getElementById('take-photo');
+        takePhotoButton.addEventListener('click', takePhoto);
+
+        // Inicializa a câmera ao carregar a página
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(function(err) {
+                console.error('Erro ao acessar a câmera:', err);
+            });
+    </script>
+</body>
+</html>
